@@ -30,9 +30,14 @@ const version = packagejson.version;
 
 const DEMO_PORT = process.env.DEMO_PORT || 4141;
 const WISP_PORT = process.env.WISP_PORT || 4142;
+const codespaceHost = process.env.CODESPACE_NAME
+	? `${process.env.CODESPACE_NAME}-${DEMO_PORT}.${process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN || "app.github.dev"}`
+	: undefined;
 
 if (process.env.VITE_WISP_URL) {
 	process.env.VITE_WISP_URL = normalizeWebsocketUrl(process.env.VITE_WISP_URL);
+} else if (codespaceHost) {
+	process.env.VITE_WISP_URL = `wss://${codespaceHost}/wisp/`;
 } else {
 	process.env.VITE_WISP_URL = `ws://localhost:${WISP_PORT}/`;
 }
@@ -41,19 +46,28 @@ const wispserver = http.createServer((req, res) => {
 	res.writeHead(200, { "Content-Type": "text/plain" });
 	res.end("wisp server js rewrite");
 });
-wisp.options.allow_private_ips = true;
-wisp.options.allow_loopback_ips = true;
+wisp.options.allow_private_ips = false;
+wisp.options.allow_loopback_ips = false;
 
 wispserver.on("upgrade", (req, socket, head) => {
 	wisp.routeRequest(req, socket, head);
 });
 
-wispserver.listen(Number(WISP_PORT));
+wispserver.listen(Number(WISP_PORT), "127.0.0.1");
 
 const server = await createServer({
 	configFile: "./packages/demo/vite.config.ts",
 	root: "./packages/demo",
 	server: {
+		host: "0.0.0.0",
+		allowedHosts: codespaceHost ? [codespaceHost] : [],
+		proxy: {
+			"/wisp/": {
+				target: `http://127.0.0.1:${WISP_PORT}`,
+				ws: true,
+				rewrite: (url) => url.replace(/^\/wisp/, ""),
+			},
+		},
 		port: Number(DEMO_PORT),
 		strictPort: true,
 	},

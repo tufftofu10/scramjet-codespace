@@ -1,0 +1,12 @@
+{
+  "name": "Scramjet with local Wisp",
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "forwardPorts": [4141],
+  "portsAttributes": {
+    "4141": { "label": "Scramjet", "onAutoForward": "notify", "visibility": "private" }
+  },
+  "otherPortsAttributes": { "onAutoForward": "ignore" },
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "postStartCommand": "bash .devcontainer/start.sh",
+  "waitFor": "postCreateCommand"
+}
